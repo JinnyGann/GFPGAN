@@ -14,17 +14,16 @@ jobs:
       with:
         submodules: 'recursive'
 
-    # 2. Install Vulkan SDK via Chocolatey (The Industry-Standard Method)
-    # This is a robust package manager that handles finding and installing the SDK.
+    # 2. Install the latest stable Vulkan SDK from Chocolatey
+    # REMOVED the failing --version flag to let Chocolatey do its job.
     - name: Install Vulkan SDK
-      run: choco install vulkan-sdk --version=1.3.275.0 --no-progress -y
+      run: choco install vulkan-sdk --no-progress -y
 
     # 3. Add MSBuild (Visual Studio) to the PATH
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
     # 4. Configure the project with CMake
-    # CMake will automatically find the Vulkan SDK installed by Chocolatey.
     - name: Configure CMake
       run: cmake -S . -B build -DGFPGAN_BUILD_NCNN_VULKAN=ON
 
