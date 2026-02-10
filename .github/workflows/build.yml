@@ -1,49 +1,47 @@
 name: Build GFPGAN Executable
 
-# This allows you to run this workflow manually from the Actions tab
 on:
   workflow_dispatch:
 
 jobs:
   build-windows:
-    # Use a standard, stable Windows environment
     runs-on: windows-latest
 
     steps:
-    # Step 1: Get your forked source code and its dependencies
+    # 1. Get source code and sub-dependencies
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: 'recursive' # This is critical, it gets the ncnn dependency
+        submodules: 'recursive'
 
-    # Step 2: Download and Install Vulkan SDK Directly (The Robust Method)
-    # This step replaces the broken community actions.
+    # 2. Download and Install Vulkan SDK using the robust command
     - name: Install Vulkan SDK
       shell: powershell
       run: |
         $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.3.275.0/windows/VulkanSDK-1.3.275.0-Installer.exe"
-        $outputFile = "vulkan_sdk_installer.exe"
-        Write-Host "Downloading Vulkan SDK from $vulkanUrl"
+        $outputFile = "VulkanSDK-Installer.exe"
+        Write-Host "Downloading Vulkan SDK from: $vulkanUrl"
         Invoke-WebRequest -Uri $vulkanUrl -OutFile $outputFile
-        Write-Host "Starting silent installation of Vulkan SDK..."
-        # The /S argument tells the installer to run silently without any popups
-        Start-Process -FilePath $outputFile -ArgumentList "/S" -Wait
-        Write-Host "Vulkan SDK installation complete."
+        Write-Host "Download complete. Starting silent installation..."
+        
+        # This is the corrected command. It is more explicit and reliable for automation.
+        Start-Process -FilePath $outputFile -ArgumentList '--confirm-command', 'install' -Wait
+        
+        Write-Host "Vulkan SDK installation finished."
       
-    # Step 3: Add MSBuild (from Visual Studio) to the system's PATH
+    # 3. Add MSBuild (Visual Studio) to the PATH
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
-    # Step 4: Configure the project using CMake
-    # This step finds the newly installed Vulkan and prepares the build files
+    # 4. Configure the project with CMake
     - name: Configure CMake
       run: cmake -S . -B build -DGFPGAN_BUILD_NCNN_VULKAN=ON
 
-    # Step 5: Compile the code using MSBuild to create the final .exe
+    # 5. Compile the C++ code into an .exe
     - name: Build Project with MSBuild
       run: msbuild build/GFPGAN.sln /p:Configuration=Release /p:Platform=x64
 
-    # Step 6: Package the .exe and models folder into a .zip for you to download
+    # 6. Upload the final .exe and models for download
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
