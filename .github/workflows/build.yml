@@ -1,42 +1,42 @@
 name: Build GFPGAN Executable
 
-# This allows you to run this workflow manually from the Actions tab
 on:
   workflow_dispatch:
 
 jobs:
   build-windows:
-    runs-on: windows-2022 # Using a more modern Windows runner
+    runs-on: windows-latest
 
     steps:
     # 1. Get the source code from your fork
-    # Using v4 for future-proofing
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: 'recursive' # This is critical, it gets the ncnn dependency
+        submodules: 'recursive' # Critical for pulling in ncnn
 
-    # 2. Install the Vulkan SDK (using a current, working action)
+    # 2. Download and Install Vulkan SDK Directly (The Robust Method)
     - name: Install Vulkan SDK
-      uses: j-min/setup-vulkan-sdk@v1
-      with:
-        vulkan-query-version: '1.3.216.0' # A specific, stable version of the SDK
-
-    # 3. Setup MSVC (Visual Studio) build tools
-    # Using v2 for future-proofing
+      shell: powershell
+      run: |
+        $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.3.216.0/windows/VulkanSDK-1.3.216.0-Installer.exe"
+        $outputFile = "vulkan_sdk_installer.exe"
+        Invoke-WebRequest -Uri $vulkanUrl -OutFile $outputFile
+        Start-Process -FilePath $outputFile -ArgumentList "--confirm-command", "install" -Wait
+      
+    # 3. Add MSBuild (from Visual Studio) to the system's PATH
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
     # 4. Configure the project using CMake
+    #    This step finds Vulkan and prepares the Visual Studio project files
     - name: Configure CMake
       run: cmake -S . -B build -DGFPGAN_BUILD_NCNN_VULKAN=ON
 
-    # 5. Compile the code with MSBuild to create the .exe
-    - name: Build Project
+    # 5. Compile the code using MSBuild to create the .exe
+    - name: Build Project with MSBuild
       run: msbuild build/GFPGAN.sln /p:Configuration=Release /p:Platform=x64
 
     # 6. Upload the final .exe and models folder as a downloadable artifact
-    # Using the required v4 version of the upload action
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
@@ -44,3 +44,4 @@ jobs:
         path: |
           build/Release/gfpgan-ncnn-vulkan.exe
           models/
+
