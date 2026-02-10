@@ -1,45 +1,46 @@
 name: Build GFPGAN Executable
 
-# This tells GitHub to show a button to run this workflow manually
+# This allows you to run this workflow manually from the Actions tab
 on:
   workflow_dispatch:
 
 jobs:
   build-windows:
-    runs-on: windows-latest  # Use a fresh Windows machine
+    runs-on: windows-2022 # Using a more modern Windows runner
 
     steps:
     # 1. Get the source code from your fork
+    # Using v4 for future-proofing
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
-        submodules: 'recursive' # Important: this gets the ncnn dependency
+        submodules: 'recursive' # This is critical, it gets the ncnn dependency
 
-    # 2. Install the Vulkan SDK (required for compiling)
+    # 2. Install the Vulkan SDK (using a current, working action)
     - name: Install Vulkan SDK
-      uses: humblebee/install-vulkan-sdk@v1.2
+      uses: j-min/setup-vulkan-sdk@v1
       with:
-        version: '1.3.216.0' # A specific, stable version of the SDK
+        vulkan-query-version: '1.3.216.0' # A specific, stable version of the SDK
 
     # 3. Setup MSVC (Visual Studio) build tools
-    - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v1.1
+    # Using v2 for future-proofing
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
 
     # 4. Configure the project using CMake
     - name: Configure CMake
       run: cmake -S . -B build -DGFPGAN_BUILD_NCNN_VULKAN=ON
 
-    # 5. Compile the code and create the .exe
-    - name: Build with MSBuild
-      run: |
-        cd build
-        msbuild GFPGAN.sln /p:Configuration=Release /p:Platform=x64
+    # 5. Compile the code with MSBuild to create the .exe
+    - name: Build Project
+      run: msbuild build/GFPGAN.sln /p:Configuration=Release /p:Platform=x64
 
-    # 6. Find the .exe and package it for download
+    # 6. Upload the final .exe and models folder as a downloadable artifact
+    # Using the required v4 version of the upload action
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: gfpgan-ncnn-vulkan-windows
         path: |
           build/Release/gfpgan-ncnn-vulkan.exe
-          models/ # Also include the models folder for convenience
+          models/
